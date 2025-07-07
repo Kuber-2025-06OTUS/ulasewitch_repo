@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: angie-config
+data:
+  angie.conf: |
+    user angie;
+    worker_processes 1;
+    error_log /var/log/angie/error.log;
+    pid /run/angie.pid;
+    include /usr/share/angie/modules/*.conf;
+    events{
+      worker_connections 1024;
+    }
+
+    http{
+      server_tokens off;
+      charset UTF-8;
+      sendfile on;
+      tcp_nopush on;
+      tcp_nodelay on;
+      keepalive_timeout 65;
+      types_hash_max_size 4096;
+      include /etc/angie/mime.types;
+      default_type application/octet-stream;
+      include /etc/angie/http.d/*.conf;
+    }
+
+  default.conf: |
+    server {
+    listen 8000 default_server;
+
+    server_name _;
+
+    location / {
+        root /homework;
+        autoindex on;
+        allow all;
+      }
+
+    }
+
