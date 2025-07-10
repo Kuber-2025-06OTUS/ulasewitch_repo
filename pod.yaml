@@ -22,7 +22,7 @@ spec:
     lifecycle:
       preStop:
         exec:
-          command: ['sh', '-s', "rm -f /init/index.html"]
+          command: ['sh', '-s', "rm -f /homework/index.html"]
     volumeMounts:
     - mountPath: /homework
       name: shared-volume
