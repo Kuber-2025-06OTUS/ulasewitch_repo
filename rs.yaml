@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  namespace: homework
+  name: webserver
+  labels:
+    app: welcome
+    tier: webserver
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      tier: webserver
+  template:
+    metadata:
+      labels:
+        tier: webserver
+    spec:
+      containers:
+      - name: webserver
+        image: docker.angie.software/angie:latest
+        ports:
+          - containerPort: 8000
+        lifecycle:
+          preStop:
+            exec:
+              command: [ 'sh', '-s', "rm -f /init/index.html" ]
+        volumeMounts:
+          - mountPath: /homework
+            name: shared-volume
+          - name: angie-config
+            mountPath: /etc/angie/angie.conf
+            subPath: angie.conf
+          - name: angie-config
+            mountPath: /etc/angie/http.d/default.conf
+            subPath: default.conf
+      volumes:
+        - name: shared-volume
+          emptyDir:
+            sizeLimit: 5Mi
+        - name: angie-config
+          configMap:
+            name: angie-config
+
