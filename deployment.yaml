@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: homework
+  name: webserver
+  labels:
+    app: welcome
+    tier: webserver
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 2
+  selector:
+    matchLabels:
+      tier: webserver
+  template:
+    metadata:
+      labels:
+        tier: webserver
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: topology.kubernetes.io/homework
+                    operator: In
+                    values:
+                      - "true"
+
+      initContainers:
+      - name: init-otus-first-hw
+        image: busybox:1.28
+        command: ['sh', '-c', "wget -O /init/index.html https://example.dwweb.ru/index.html;"]
+        volumeMounts:
+        - mountPath: /init
+          name: shared-volume
+
+      containers:
+      - name: otus-firs-hw
+        image: docker.angie.software/angie:1.10.0
+        ports:
+        - containerPort: 8000
+        readinessProbe:
+          exec:
+            command: [ 'sh', '-s', "cat /homework/index.html" ]
+        lifecycle:
+          preStop:
+            exec:
+              command: [ 'sh', '-s', "rm -f /homework/index.html" ]
+        volumeMounts:
+          - mountPath: /homework
+            name: shared-volume
+          - name: angie-config
+            mountPath: /etc/angie/angie.conf
+            subPath: angie.conf
+          - name: angie-config
+            mountPath: /etc/angie/http.d/default.conf
+            subPath: default.conf
+      volumes:
+        - name: shared-volume
+          emptyDir:
+            sizeLimit: 5Mi
+        - name: angie-config
+          configMap:
+            name: angie-config
+
