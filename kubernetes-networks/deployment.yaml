@@ -92,10 +92,14 @@ spec:
       - name: otus-firs-hw
         image: docker.angie.software/angie:1.10.0
         ports:
-        - containerPort: 8000
+        - name: webserver-port
+          containerPort: 8000
         readinessProbe:
-          exec:
-            command: [ 'sh', '-s', "cat /homework/index.html" ]
+          httpGet:
+            path: /index.html
+            port: webserver-port
+          failureThreshold: 30
+          periodSeconds: 3
         lifecycle:
           preStop:
             exec:
