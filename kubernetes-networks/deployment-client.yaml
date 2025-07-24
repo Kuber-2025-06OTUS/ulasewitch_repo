@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: homework
+  name: webserver-client
+  labels:
+    app: welcome
+    tier: webserver
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 2
+  selector:
+    matchLabels:
+      tier: webserver
+      app: webserversel
+  template:
+    metadata:
+      labels:
+        tier: webserver
+        app: webserversel
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: topology.kubernetes.io/homework
+                    operator: In
+                    values:
+                      - "true"
+
+      containers:
+      - name: webserver-client
+        image: busybox:1.28
+        command: ['sh', '-c', "while true; do wget -q -O - http://webserver-service:5000; sleep 5; done"]
+        resources:
+          limits: 
+            memory: "64Mi"
+            cpu: "100m"
+
