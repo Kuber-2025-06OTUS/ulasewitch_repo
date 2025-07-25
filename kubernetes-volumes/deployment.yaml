@@ -1,0 +1,186 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: homework
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: angie-config
+data:
+  angie.conf: |
+    user angie;
+    worker_processes 1;
+    error_log /var/log/angie/error.log;
+    pid /run/angie.pid;
+    include /usr/share/angie/modules/*.conf;
+    events{
+      worker_connections 1024;
+    }
+
+    http{
+      server_tokens off;
+      charset UTF-8;
+      sendfile on;
+      tcp_nopush on;
+      tcp_nodelay on;
+      keepalive_timeout 65;
+      types_hash_max_size 4096;
+      include /etc/angie/mime.types;
+      default_type application/octet-stream;
+      include /etc/angie/http.d/*.conf;
+    }
+
+  default.conf: |
+    server {
+    listen 8000 default_server;
+
+    server_name _;
+
+    location / {
+        root /homework;
+        autoindex on;
+        allow all;
+      }
+    location /conf/file {
+        alias /homework/conf/;
+        index dbconfig;
+        autoindex on;
+        allow all;
+      }
+
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: homework
+  name: webserver
+  labels:
+    app: welcome
+    tier: webserver
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 2
+  selector:
+    matchLabels:
+      tier: webserver
+      app: webserversel
+  template:
+    metadata:
+      labels:
+        tier: webserver
+        app: webserversel
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: topology.kubernetes.io/homework
+                    operator: In
+                    values:
+                      - "true"
+
+      initContainers:
+      - name: init-otus-first-hw
+        image: busybox:1.28
+        command: ['sh', '-c', "wget -O /init/index.html https://example.dwweb.ru/index.html;"]
+        volumeMounts:
+        - mountPath: /init
+          name: shared-volume
+
+      containers:
+      - name: otus-firs-hw
+        image: docker.angie.software/angie:1.10.0
+        env:
+        - name: DB_USR
+          valueFrom:
+            configMapKeyRef:
+              name: webserver-cm
+              key: dbuser
+        - name: DB_PASS
+          valueFrom:
+            configMapKeyRef:
+              name: webserver-cm
+              key: dbpass
+        ports:
+        - name: webserver-port
+          containerPort: 8000
+        readinessProbe:
+          httpGet:
+            path: /index.html
+            port: webserver-port
+          failureThreshold: 30
+          periodSeconds: 3
+        lifecycle:
+          preStop:
+            exec:
+              command: [ 'sh', '-s', "rm -f /homework/index.html" ]
+        volumeMounts:
+          - mountPath: /homework
+            name: shared-volume
+          - name: angie-config
+            mountPath: /etc/angie/angie.conf
+            subPath: angie.conf
+          - name: angie-config
+            mountPath: /etc/angie/http.d/default.conf
+            subPath: default.conf
+          - name: config-key-value
+            mountPath: /homework/conf/
+            readOnly: true
+      volumes:
+        - name: shared-volume
+          persistentVolumeClaim:
+            claimName: webserver-pvc
+        - name: angie-config
+          configMap:
+            name: angie-config
+        - name: config-key-value
+          configMap:
+            name: webserver-cm
+            items:
+            - key: "dbconfig"
+              path: "dbconfig"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webserver-service
+  namespace: homework
+spec:
+  selector:
+    app: webserversel
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 8000
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: webserver-ingress
+  namespace: homework
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /index.html
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: homework.otus
+    http:
+      paths:
+      - path: /homepage(/$|$)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: webserver-service
+            port:
+              number: 5000
