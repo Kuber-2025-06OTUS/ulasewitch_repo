@@ -4,7 +4,8 @@ metadata:
   namespace: homework
   name: webserver-pvc
 spec:
-  storageClassName: "standard"
+  #  storageClassName: "standard"
+  storageClassName: "low-latency"
   accessModes:
     - ReadWriteOnce
   resources:
