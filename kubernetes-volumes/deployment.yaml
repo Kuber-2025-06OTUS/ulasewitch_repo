@@ -43,7 +43,7 @@ data:
         allow all;
       }
     location /conf/file {
-        alias /homework/conf/;
+        alias /homework/conf;
         index dbconfig;
         autoindex on;
         allow all;
@@ -168,17 +168,19 @@ kind: Ingress
 metadata:
   name: webserver-ingress
   namespace: homework
-  annotations:
-    nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/rewrite-target: /index.html
+    #  annotations:
+    #    nginx.ingress.kubernetes.io/use-regex: "true"
+    #    nginx.ingress.kubernetes.io/rewrite-target: /index.html
 spec:
   ingressClassName: nginx
   rules:
   - host: homework.otus
     http:
       paths:
-      - path: /homepage(/$|$)
-        pathType: ImplementationSpecific
+        #      - path: /homepage(/$|$)
+      - path: /
+        #        pathType: ImplementationSpecific
+        pathType: Prefix
         backend:
           service:
             name: webserver-service
