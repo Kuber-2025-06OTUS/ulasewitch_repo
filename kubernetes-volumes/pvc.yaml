@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: homework
+  name: webserver-pvc
+spec:
+  #  storageClassName: "standard"
+  storageClassName: "webserver-fast-sc"
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Mi
+
