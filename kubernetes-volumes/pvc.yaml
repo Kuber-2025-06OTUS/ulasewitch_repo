@@ -5,7 +5,7 @@ metadata:
   name: webserver-pvc
 spec:
   #  storageClassName: "standard"
-  storageClassName: "low-latency"
+  storageClassName: "webserver-fast-sc"
   accessModes:
     - ReadWriteOnce
   resources:
